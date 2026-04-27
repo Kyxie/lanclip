@@ -45,6 +45,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # ── Project Specific ──────────────────────────────────────────────────────────
 # If your Go code embeds static files, the static folder itself is tracked,

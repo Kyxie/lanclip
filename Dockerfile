@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # ── Stage 2: build backend ───────────────────────────────────────────────────
-FROM golang:1.23-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 WORKDIR /app
 COPY backend/ ./
 # Copy built frontend into the embed path expected by //go:embed static

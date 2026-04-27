@@ -15,7 +15,7 @@ import (
 	"lanclip/store"
 )
 
-//go:embed static
+//go:embed all:static
 var staticFiles embed.FS
 
 var upgrader = websocket.Upgrader{
