@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/lanclip ."
+  bin = "./tmp/lanclip"
+  include_ext = ["go"]
+  exclude_dir = ["static", "tmp"]
+  delay = 500
+
+[log]
+  time = false

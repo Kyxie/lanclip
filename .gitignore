@@ -1,0 +1,56 @@
+# ── IDEs & System ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# ── Docker & Local Env ────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Backend (Go) ──────────────────────────────────────────────────────────────
+# Binaries and overal Go artifacts
+bin/
+main
+lanclip
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test coverage
+*.out
+
+# Go modules cache (if you don't use volumes properly)
+# vendor/
+
+# ── Frontend (React/Node) ─────────────────────────────────────────────────────
+# Dependencies
+frontend/node_modules/
+node_modules/
+
+# Production build output
+frontend/dist/
+frontend/build/
+
+# Linting and formatting
+frontend/.eslintcache
+frontend/.stylelintcache
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Project Specific ──────────────────────────────────────────────────────────
+# If your Go code embeds static files, the static folder itself is tracked,
+# but the generated assets inside might not need to be if they are built from frontend.
+# backend/static/*
+# !backend/static/.gitkeep
+
+# Justfile local overrides (if any)
+.justfile.local

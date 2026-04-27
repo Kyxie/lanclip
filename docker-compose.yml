@@ -1,0 +1,8 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      MAX_HISTORY: ${MAX_HISTORY:-5}
+    restart: unless-stopped
