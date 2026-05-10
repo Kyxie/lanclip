@@ -55,3 +55,6 @@ yarn-error.log*
 
 # Justfile local overrides (if any)
 .justfile.local
+
+# Claude
+.claude/
