@@ -1,4 +1,4 @@
-# Digital Notifications
+LANCLIP
 
 A simple LAN clipboard-style notification app.
 
