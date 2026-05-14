@@ -19,11 +19,17 @@ export default function App() {
   // hasn't changed it from the previous server value (i.e., they haven't
   // started composing something new).
   const serverContentRef = useRef('')
+  // Prevents the WS echo of a just-saved clip from refilling the cleared textarea
+  const justSavedRef = useRef(false)
 
   useEffect(() => {
     if (!currentClip) return
     const incoming = currentClip.content
     setDraft((prev) => {
+      if (justSavedRef.current) {
+        justSavedRef.current = false
+        return ''
+      }
       if (prev === serverContentRef.current || prev === '') {
         return incoming
       }
@@ -39,8 +45,9 @@ export default function App() {
     const ok = await submitClip(content)
     setSaving(false)
     if (ok) {
-      // Mark current draft as "from server" so the WS echo doesn't get blocked
       serverContentRef.current = content
+      justSavedRef.current = true
+      setDraft('')
     }
   }, [draft, saving, submitClip])
 
@@ -135,7 +142,20 @@ function CopyButton({ text }: { text: string }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // clipboard API may be unavailable over plain HTTP on some browsers
+      // Fallback for plain HTTP on LAN where navigator.clipboard is unavailable
+      try {
+        const el = document.createElement('textarea')
+        el.value = text
+        Object.assign(el.style, { position: 'fixed', top: '0', opacity: '0' })
+        document.body.appendChild(el)
+        el.select()
+        document.execCommand('copy')
+        document.body.removeChild(el)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      } catch {
+        // nothing we can do
+      }
     }
   }, [text])
 
