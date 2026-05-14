@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Clipboard, Copy, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -6,37 +6,10 @@ import { useClipboard, type Clip } from '@/hooks/useClipboard'
 import { cn, relativeTime } from '@/lib/utils'
 
 export default function App() {
-  const { clips, maxHistory, connected, submitClip } = useClipboard()
-
-  const currentClip = clips[0] ?? null
-  const history = clips.slice(1)
+  const { clips, connected, submitClip } = useClipboard()
 
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
-
-  // Tracks the last content that came from the server.
-  // When a new clip arrives, we only overwrite the textarea if the user
-  // hasn't changed it from the previous server value (i.e., they haven't
-  // started composing something new).
-  const serverContentRef = useRef('')
-  // Prevents the WS echo of a just-saved clip from refilling the cleared textarea
-  const justSavedRef = useRef(false)
-
-  useEffect(() => {
-    if (!currentClip) return
-    const incoming = currentClip.content
-    setDraft((prev) => {
-      if (justSavedRef.current) {
-        justSavedRef.current = false
-        return ''
-      }
-      if (prev === serverContentRef.current || prev === '') {
-        return incoming
-      }
-      return prev
-    })
-    serverContentRef.current = incoming
-  }, [currentClip?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async () => {
     const content = draft.trim()
@@ -45,8 +18,6 @@ export default function App() {
     const ok = await submitClip(content)
     setSaving(false)
     if (ok) {
-      serverContentRef.current = content
-      justSavedRef.current = true
       setDraft('')
     }
   }, [draft, saving, submitClip])
@@ -115,13 +86,13 @@ export default function App() {
         </div>
 
         {/* History */}
-        {maxHistory > 1 && history.length > 0 && (
+        {clips.length > 0 && (
           <div className="mt-8">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-stripe-muted">
               History
             </p>
             <div className="flex flex-col gap-2">
-              {history.map((clip) => (
+              {clips.map((clip) => (
                 <HistoryCard key={clip.id} clip={clip} />
               ))}
             </div>
@@ -148,11 +119,14 @@ function CopyButton({ text }: { text: string }) {
         el.value = text
         Object.assign(el.style, { position: 'fixed', top: '0', opacity: '0' })
         document.body.appendChild(el)
+        el.focus()
         el.select()
-        document.execCommand('copy')
+        const ok = document.execCommand('copy')
         document.body.removeChild(el)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
+        if (ok) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        }
       } catch {
         // nothing we can do
       }
