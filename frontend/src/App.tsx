@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, Clipboard, Copy, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,6 +10,7 @@ export default function App() {
 
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const handleSave = useCallback(async () => {
     const content = draft.trim()
@@ -59,14 +60,13 @@ export default function App() {
         </div>
 
         {/* Current clip editor */}
-        <div className="rounded border border-stripe-border bg-white p-4 shadow-sm">
+        <div className="flex h-[15rem] flex-col rounded-xl border-[1.5px] border-dashed border-stripe-border bg-white p-4 transition-colors duration-200 ease-out hover:border-stripe-muted focus-within:border-solid focus-within:border-stripe-text">
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Paste or type something…"
-            rows={6}
-            className="border-0 p-0 shadow-none focus:ring-0 text-[14px] leading-relaxed"
+            className="min-h-0 flex-1 border-0 p-0 shadow-none focus:ring-0 text-[14px] leading-relaxed"
           />
           <div className="mt-3 flex items-center justify-between border-t border-stripe-border pt-3">
             <span className="text-[11px] text-stripe-muted select-none">
@@ -93,7 +93,15 @@ export default function App() {
             </p>
             <div className="flex flex-col gap-2">
               {clips.map((clip) => (
-                <HistoryCard key={clip.id} clip={clip} />
+                <HistoryCard
+                  key={clip.id}
+                  clip={clip}
+                  expanded={expandedId === clip.id}
+                  onToggle={() =>
+                    setExpandedId((prev) => (prev === clip.id ? null : clip.id))
+                  }
+                  onCollapse={() => setExpandedId(null)}
+                />
               ))}
             </div>
           </div>
@@ -145,33 +153,61 @@ function CopyButton({ text }: { text: string }) {
   )
 }
 
-function HistoryCard({ clip }: { clip: Clip }) {
+function HistoryCard({
+  clip,
+  expanded,
+  onToggle,
+  onCollapse,
+}: {
+  clip: Clip
+  expanded: boolean
+  onToggle: () => void
+  onCollapse: () => void
+}) {
   const [, setTick] = useState(0)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30_000)
     return () => clearInterval(id)
   }, [])
 
-  const preview =
-    clip.content.length > 200 ? clip.content.slice(0, 200) + '…' : clip.content
+  useEffect(() => {
+    if (!expanded) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onCollapse()
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [expanded, onCollapse])
 
   return (
-    <div className="flex items-start justify-between gap-4 rounded border border-stripe-border bg-white px-4 py-3 shadow-sm">
-      <p
-        className={cn(
-          'flex-1 text-[13px] leading-relaxed text-stripe-text whitespace-pre-wrap break-words',
-          clip.content.length > 200 && 'line-clamp-3',
-        )}
-      >
-        {preview}
+    <div
+      ref={ref}
+      onClick={onToggle}
+      className={cn(
+        'relative flex cursor-pointer items-start justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-all duration-300 ease-out',
+        expanded
+          ? 'max-h-[15rem] overflow-y-auto border-solid border-stripe-text'
+          : 'max-h-[5.5rem] overflow-hidden border-dashed border-stripe-border hover:border-stripe-muted',
+      )}
+    >
+      <p className="flex-1 text-[13px] leading-relaxed text-stripe-text whitespace-pre-wrap break-words">
+        {clip.content}
       </p>
-      <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+      <div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5">
         <span className="text-[11px] text-stripe-muted tabular-nums">
           {relativeTime(new Date(clip.createdAt))}
         </span>
-        <CopyButton text={clip.content} />
+        <div onClick={(e) => e.stopPropagation()}>
+          <CopyButton text={clip.content} />
+        </div>
       </div>
+      {!expanded && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />
+      )}
     </div>
   )
 }
