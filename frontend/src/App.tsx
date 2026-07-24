@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, Clipboard, Copy, Wifi, WifiOff } from 'lucide-react'
+import { Check, Clipboard, Copy, Download, FileUp, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { useClipboard, type Clip } from '@/hooks/useClipboard'
+import { useClipboard, type Clip, type SharedFile } from '@/hooks/useClipboard'
 import { cn, relativeTime } from '@/lib/utils'
 
 export default function App() {
-  const { clips, connected, submitClip } = useClipboard()
+  const { clips, connected, file, submitClip, uploadFile } = useClipboard()
 
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+  const [draggingFile, setDraggingFile] = useState(false)
+  const dragDepth = useRef(0)
 
   const handleSave = useCallback(async () => {
     const content = draft.trim()
@@ -22,6 +26,47 @@ export default function App() {
       setDraft('')
     }
   }, [draft, saving, submitClip])
+
+  const handleFile = useCallback(async (file: File) => {
+    if (uploading) return
+    if (file.size > 100 * 1024 * 1024) {
+      setUploadError('File must be 100 MiB or smaller')
+      return
+    }
+    setUploadError('')
+    setUploading(true)
+    const error = await uploadFile(file)
+    setUploading(false)
+    if (error) setUploadError(error)
+  }, [uploadFile, uploading])
+
+  const isFileDrag = (e: React.DragEvent) =>
+    Array.from(e.dataTransfer.types).includes('Files')
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!isFileDrag(e)) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDraggingFile(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!isFileDrag(e)) return
+    dragDepth.current -= 1
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0
+      setDraggingFile(false)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (!isFileDrag(e)) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setDraggingFile(false)
+    const dropped = e.dataTransfer.files.item(0)
+    if (dropped) void handleFile(dropped)
+  }
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -60,7 +105,16 @@ export default function App() {
         </div>
 
         {/* Current clip editor */}
-        <div className="flex h-[15rem] flex-col rounded-xl border-[1.5px] border-dashed border-stripe-border bg-white p-4 transition-colors duration-200 ease-out hover:border-stripe-muted focus-within:border-solid focus-within:border-stripe-text">
+        <div
+          onDragEnter={handleDragEnter}
+          onDragOver={(e) => isFileDrag(e) && e.preventDefault()}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={cn(
+            'relative flex h-[15rem] flex-col rounded-xl border-[1.5px] border-dashed border-stripe-border bg-white p-4 transition-colors duration-200 ease-out hover:border-stripe-muted focus-within:border-solid focus-within:border-stripe-text',
+            draggingFile && 'border-solid border-stripe-text bg-stripe-bg',
+          )}
+        >
           <Textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -70,7 +124,13 @@ export default function App() {
           />
           <div className="mt-3 flex items-center justify-between border-t border-stripe-border pt-3">
             <span className="text-[11px] text-stripe-muted select-none">
-              {draft.length > 0 ? `${draft.length} chars` : 'Ctrl+Enter to save'}
+              {uploading
+                ? 'Uploading file…'
+                : draggingFile
+                  ? 'Drop to upload (max 100 MiB)'
+                  : draft.length > 0
+                    ? `${draft.length} chars`
+                    : 'Ctrl+Enter to save · Drag a file here'}
             </span>
             <div className="flex items-center gap-2">
               <CopyButton text={draft} />
@@ -83,7 +143,10 @@ export default function App() {
               </Button>
             </div>
           </div>
+          {uploadError && <p className="mt-2 text-[11px] text-red-500">{uploadError}</p>}
         </div>
+
+        {file && <FileCard file={file} />}
 
         {/* History */}
         {clips.length > 0 && (
@@ -109,6 +172,32 @@ export default function App() {
       </div>
     </div>
   )
+}
+
+function FileCard({ file }: { file: SharedFile }) {
+  return (
+    <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border-[1.5px] border-dashed border-stripe-border bg-white px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <FileUp className="h-4 w-4 shrink-0 text-stripe-muted" strokeWidth={1.5} />
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-medium text-stripe-text">{file.name}</p>
+          <p className="text-[11px] text-stripe-muted">{formatFileSize(file.size)} · {relativeTime(new Date(file.createdAt))}</p>
+        </div>
+      </div>
+      <a
+        href="/api/file"
+        className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded border border-stripe-border bg-white px-3 text-[13px] font-medium text-stripe-text transition-colors hover:bg-stripe-bg active:bg-[#eef2f7]"
+      >
+        <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+        Download
+      </a>
+    </div>
+  )
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024 * 1024) return `${Math.ceil(size / 1024)} KiB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MiB`
 }
 
 function CopyButton({ text }: { text: string }) {

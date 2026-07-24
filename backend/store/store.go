@@ -13,10 +13,62 @@ type Clip struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// FileInfo is the metadata for the one file shared by the service.
+// The bytes themselves intentionally stay private to the in-memory store.
+type FileInfo struct {
+	Name        string    `json:"name"`
+	Size        int64     `json:"size"`
+	ContentType string    `json:"contentType"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type file struct {
+	info FileInfo
+	data []byte
+}
+
 type Store struct {
 	mu         sync.RWMutex
 	clips      []Clip
 	maxHistory int
+	file       *file
+}
+
+// SetFile atomically replaces the currently shared file. data is owned by the
+// store after this call and must not be modified by the caller.
+func (s *Store) SetFile(name, contentType string, data []byte) FileInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	info := FileInfo{
+		Name:        name,
+		Size:        int64(len(data)),
+		ContentType: contentType,
+		CreatedAt:   time.Now(),
+	}
+	s.file = &file{info: info, data: data}
+	return info
+}
+
+func (s *Store) GetFileInfo() *FileInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.file == nil {
+		return nil
+	}
+	info := s.file.info
+	return &info
+}
+
+// GetFile returns immutable file data. A replacement always uses a new slice,
+// so an in-flight download can safely continue with the previous file.
+func (s *Store) GetFile() (FileInfo, []byte, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.file == nil {
+		return FileInfo{}, nil, false
+	}
+	return s.file.info, s.file.data, true
 }
 
 func New(maxHistory int) *Store {

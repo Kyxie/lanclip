@@ -6,15 +6,22 @@ export interface Clip {
   createdAt: string
 }
 
-interface WsMessage {
-  type: 'clips_updated'
-  clips: Clip[]
+export interface SharedFile {
+  name: string
+  size: number
+  contentType: string
+  createdAt: string
 }
+
+type WsMessage =
+  | { type: 'clips_updated'; clips: Clip[] }
+  | { type: 'file_updated'; file: SharedFile | null }
 
 export function useClipboard() {
   const [clips, setClips] = useState<Clip[]>([])
   const [maxHistory, setMaxHistory] = useState(5)
   const [connected, setConnected] = useState(false)
+  const [file, setFile] = useState<SharedFile | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -29,6 +36,7 @@ export function useClipboard() {
       try {
         const msg: WsMessage = JSON.parse(e.data)
         if (msg.type === 'clips_updated') setClips(msg.clips)
+        if (msg.type === 'file_updated') setFile(msg.file)
       } catch {
         // ignore malformed messages
       }
@@ -69,5 +77,17 @@ export function useClipboard() {
     }
   }, [])
 
-  return { clips, maxHistory, connected, submitClip }
+  const uploadFile = useCallback(async (file: File): Promise<string | null> => {
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/file', { method: 'POST', body: form })
+      if (res.ok) return null
+      return (await res.text()) || 'Upload failed'
+    } catch {
+      return 'Could not reach the server'
+    }
+  }, [])
+
+  return { clips, maxHistory, connected, file, submitClip, uploadFile }
 }

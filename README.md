@@ -19,6 +19,7 @@ This project lets users submit short text clips and receive real-time updates th
 - Get app config with `GET /api/config`
 - Receive live clip updates via `/ws`
 - Configurable clip history size through `MAX_HISTORY`
+- Drag one file (up to 100 MiB) into the editor to share it with connected clients
 
 ## Quick Start
 
@@ -49,6 +50,12 @@ just dev-down
 
 - `PORT` (default: `3000`)
 - `MAX_HISTORY` (default: `5`)
+
+## File sharing
+
+The most recently uploaded file is stored in memory and replaces the previous
+one. It is available to all connected clients until the service restarts; files
+are not persisted to disk.
 
 ## Project Structure
 
