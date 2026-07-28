@@ -108,3 +108,26 @@ func (s *Store) GetAll() []Clip {
 	copy(result, s.clips)
 	return result
 }
+
+// DeleteClip removes one clip by ID and returns the updated history.
+func (s *Store) DeleteClip(id string) []Clip {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, clip := range s.clips {
+		if clip.ID == id {
+			s.clips = append(s.clips[:i], s.clips[i+1:]...)
+			break
+		}
+	}
+	result := make([]Clip, len(s.clips))
+	copy(result, s.clips)
+	return result
+}
+
+// ClearFile removes the currently shared file.
+func (s *Store) ClearFile() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.file = nil
+}

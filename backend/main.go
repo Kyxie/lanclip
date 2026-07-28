@@ -73,6 +73,14 @@ func main() {
 		json.NewEncoder(w).Encode(clips)
 	})
 
+	mux.HandleFunc("DELETE /api/clips/{id}", func(w http.ResponseWriter, r *http.Request) {
+		clips := s.DeleteClip(r.PathValue("id"))
+		data, _ := json.Marshal(map[string]any{"type": "clips_updated", "clips": clips})
+		h.Broadcast(data)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(clips)
+	})
+
 	mux.HandleFunc("POST /api/file", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
 		reader, err := r.MultipartReader()
@@ -149,6 +157,12 @@ func main() {
 		w.Write(data)
 	})
 
+	mux.HandleFunc("DELETE /api/file", func(w http.ResponseWriter, r *http.Request) {
+		s.ClearFile()
+		broadcastFile(h, s)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -205,7 +219,7 @@ func safeFilename(name string) string {
 func cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
