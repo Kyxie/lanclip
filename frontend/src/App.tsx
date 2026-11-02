@@ -107,7 +107,7 @@ export default function App() {
           {uploadError && <p className="mt-2 text-[11px] text-red-500">{uploadError}</p>}
         </div>
 
-        {(file || clips.length > 0) && <div className="mt-8 flex items-center justify-between gap-4"><span className="text-[11px] text-stripe-muted">Shared content</span><Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => void handleClearAll()} disabled={clearing}><Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />{clearing ? 'Clearing…' : 'Clear all'}</Button></div>}
+        {(file || clips.length > 0) && <div className="mt-8 flex justify-end"><Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => void handleClearAll()} disabled={clearing}><Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />{clearing ? 'Clearing…' : 'Clear all'}</Button></div>}
         {clearError && <p role="alert" className="mt-2 text-[11px] text-red-500">{clearError}</p>}
         {file && <section className="mt-6"><SectionTitle>File</SectionTitle><FileCard file={file} onDelete={() => void clearFile()} /></section>}
         {clips.length > 0 && <section className="mt-8"><SectionTitle>Text</SectionTitle><div className="flex flex-col gap-2">{clips.map((clip) => <HistoryCard key={clip.id} clip={clip} expanded={expandedId === clip.id} onToggle={() => setExpandedId((prev) => prev === clip.id ? null : clip.id)} onCollapse={() => setExpandedId(null)} onDelete={() => void deleteClip(clip.id)} />)}</div></section>}
@@ -132,7 +132,7 @@ function formatFileSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MiB`
 }
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, iconOnly = false }: { text: string; iconOnly?: boolean }) {
   const [copied, setCopied] = useState(false)
   const handleCopy = useCallback(async () => {
     if (!text.trim()) return
@@ -145,7 +145,7 @@ function CopyButton({ text }: { text: string }) {
       document.body.removeChild(el)
     }
   }, [text])
-  return <Button variant="outline" size="sm" onClick={handleCopy} disabled={!text.trim()}>{copied ? <Check className="h-3.5 w-3.5 text-emerald-500" strokeWidth={2.5} /> : <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />}{copied ? 'Copied' : 'Copy'}</Button>
+  return <Button variant={iconOnly ? 'ghost' : 'outline'} size="sm" className={iconOnly ? 'px-2' : undefined} aria-label={iconOnly ? (copied ? 'Copied' : 'Copy text clip') : undefined} onClick={handleCopy} disabled={!text.trim()}>{copied ? <Check className={cn(iconOnly ? 'h-4 w-4' : 'h-3.5 w-3.5', 'text-emerald-500')} strokeWidth={2.5} /> : <Copy className={iconOnly ? 'h-4 w-4' : 'h-3.5 w-3.5'} strokeWidth={1.5} />}{!iconOnly && (copied ? 'Copied' : 'Copy')}</Button>
 }
 
 function HistoryCard({ clip, expanded, onToggle, onCollapse, onDelete }: { clip: Clip; expanded: boolean; onToggle: () => void; onCollapse: () => void; onDelete: () => void }) {
@@ -155,7 +155,7 @@ function HistoryCard({ clip, expanded, onToggle, onCollapse, onDelete }: { clip:
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (!expanded) return; const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCollapse() }; document.addEventListener('mousedown', handler); return () => document.removeEventListener('mousedown', handler) }, [expanded, onCollapse])
   return <div ref={ref} {...handlers} className={cn('relative flex cursor-pointer items-start justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-all duration-300 ease-out', deleteMode ? 'min-h-[5.5rem] items-center justify-center border-solid border-red-500 bg-red-50' : expanded ? 'max-h-[15rem] overflow-y-auto border-solid border-stripe-text' : 'max-h-[5.5rem] overflow-hidden border-dashed border-stripe-border hover:border-stripe-muted')}>
-    {deleteMode ? <DeleteLabel /> : <><p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} /><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label="Delete text clip" onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}</>}
+    {deleteMode ? <DeleteLabel /> : <><p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} iconOnly /><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label="Delete text clip" onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}</>}
   </div>
 }
 
