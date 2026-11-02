@@ -18,6 +18,10 @@ logs service="":
 
 # ── Prod ───────────────────────────────────────────────────
 
+# Publish the current commit and a new version tag (patch, minor, or major)
+release bump="patch":
+    bash scripts/release.sh {{bump}}
+
 # Build production image
 prod-build:
     @echo "📦 Building production image: lanclip..."

@@ -46,6 +46,12 @@ Stop dev environment:
 just dev-down
 ```
 
+## Release
+
+After committing your changes, run `just release` to push the current branch and create the next patch tag. Use `just release minor` or `just release major` to increase the middle or first version number. For example, starting at `v1.0.10`, these produce `v1.0.11`, `v1.1.0`, or `v2.0.0` respectively.
+
+The command requires a clean working tree and an up-to-date branch. It pushes the commit and tag together, which triggers the Docker image build. You can also choose **Run workflow** in GitHub Actions and select patch, minor, or major.
+
 ## Environment Variables
 
 - `PORT` (default: `3000`)
