@@ -105,5 +105,13 @@ export function useClipboard() {
     }
   }, [])
 
-  return { clips, maxHistory, connected, file, submitClip, uploadFile, deleteClip, clearFile }
+  const clearAll = useCallback(async (): Promise<boolean> => {
+    try {
+      return (await fetch('/api/clipboard', { method: 'DELETE' })).ok
+    } catch {
+      return false
+    }
+  }, [])
+
+  return { clips, maxHistory, connected, file, submitClip, uploadFile, deleteClip, clearFile, clearAll }
 }

@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, Clipboard, Copy, Download, FileUp, Upload, Wifi, WifiOff } from 'lucide-react'
+import { Check, Clipboard, Copy, Download, FileUp, Trash2, Upload, Wifi, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useClipboard, type Clip, type SharedFile } from '@/hooks/useClipboard'
 import { cn, relativeTime } from '@/lib/utils'
 
 export default function App() {
-  const { clips, connected, file, submitClip, uploadFile, deleteClip, clearFile } = useClipboard()
+  const { clips, connected, file, submitClip, uploadFile, deleteClip, clearFile, clearAll } = useClipboard()
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [draggingFile, setDraggingFile] = useState(false)
+  const [clearing, setClearing] = useState(false)
+  const [clearError, setClearError] = useState('')
   const dragDepth = useRef(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -68,6 +70,16 @@ export default function App() {
     }
   }, [handleSave])
 
+  const handleClearAll = useCallback(async () => {
+    if (clearing) return
+    setClearing(true)
+    setClearError('')
+    const ok = await clearAll()
+    setClearing(false)
+    if (ok) setExpandedId(null)
+    else setClearError('Could not clear shared content. Try again.')
+  }, [clearAll, clearing])
+
   return (
     <div className="min-h-screen bg-stripe-bg">
       <div className="mx-auto max-w-2xl px-4 py-12">
@@ -95,7 +107,9 @@ export default function App() {
           {uploadError && <p className="mt-2 text-[11px] text-red-500">{uploadError}</p>}
         </div>
 
-        {file && <section className="mt-8"><SectionTitle>File</SectionTitle><FileCard file={file} onDelete={() => void clearFile()} /></section>}
+        {(file || clips.length > 0) && <div className="mt-8 flex items-center justify-between gap-4"><span className="text-[11px] text-stripe-muted">Shared content</span><Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => void handleClearAll()} disabled={clearing}><Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />{clearing ? 'Clearing…' : 'Clear all'}</Button></div>}
+        {clearError && <p role="alert" className="mt-2 text-[11px] text-red-500">{clearError}</p>}
+        {file && <section className="mt-6"><SectionTitle>File</SectionTitle><FileCard file={file} onDelete={() => void clearFile()} /></section>}
         {clips.length > 0 && <section className="mt-8"><SectionTitle>Text</SectionTitle><div className="flex flex-col gap-2">{clips.map((clip) => <HistoryCard key={clip.id} clip={clip} expanded={expandedId === clip.id} onToggle={() => setExpandedId((prev) => prev === clip.id ? null : clip.id)} onCollapse={() => setExpandedId(null)} onDelete={() => void deleteClip(clip.id)} />)}</div></section>}
       </div>
     </div>
@@ -109,7 +123,7 @@ function SectionTitle({ children }: { children: string }) {
 function FileCard({ file, onDelete }: { file: SharedFile; onDelete: () => void }) {
   const { deleteMode, handlers } = useLongPressDelete(() => {}, onDelete)
   return <div {...handlers} className={cn('flex min-h-[5.5rem] cursor-pointer items-center justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-colors duration-200 ease-out hover:border-solid hover:border-stripe-muted', deleteMode ? 'border-solid border-red-500 bg-red-50' : 'border-dashed border-stripe-border')}>
-    {deleteMode ? <DeleteLabel /> : <><div className="flex min-w-0 items-center gap-3"><FileUp className="h-4 w-4 shrink-0 text-stripe-muted" strokeWidth={1.5} /><div className="min-w-0"><p className="truncate text-[13px] font-medium text-stripe-text">{file.name}</p><p className="text-[11px] text-stripe-muted">{formatFileSize(file.size)} · {relativeTime(new Date(file.createdAt))}</p></div></div><a href="/api/file" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded border border-stripe-border bg-white px-3 text-[13px] font-medium text-stripe-text transition-colors hover:bg-stripe-bg active:bg-[#eef2f7]"><Download className="h-3.5 w-3.5" strokeWidth={1.5} />Download</a></>}
+    {deleteMode ? <DeleteLabel /> : <><div className="flex min-w-0 items-center gap-3"><FileUp className="h-4 w-4 shrink-0 text-stripe-muted" strokeWidth={1.5} /><div className="min-w-0"><p className="truncate text-[13px] font-medium text-stripe-text">{file.name}</p><p className="text-[11px] text-stripe-muted">{formatFileSize(file.size)} · {relativeTime(new Date(file.createdAt))}</p></div></div><div className="flex shrink-0 items-center gap-1"><a href="/api/file" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded border border-stripe-border bg-white px-3 text-[13px] font-medium text-stripe-text transition-colors hover:bg-stripe-bg active:bg-[#eef2f7]"><Download className="h-3.5 w-3.5" strokeWidth={1.5} />Download</a><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${file.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete() }}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></>}
   </div>
 }
 
@@ -141,7 +155,7 @@ function HistoryCard({ clip, expanded, onToggle, onCollapse, onDelete }: { clip:
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (!expanded) return; const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCollapse() }; document.addEventListener('mousedown', handler); return () => document.removeEventListener('mousedown', handler) }, [expanded, onCollapse])
   return <div ref={ref} {...handlers} className={cn('relative flex cursor-pointer items-start justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-all duration-300 ease-out', deleteMode ? 'min-h-[5.5rem] items-center justify-center border-solid border-red-500 bg-red-50' : expanded ? 'max-h-[15rem] overflow-y-auto border-solid border-stripe-text' : 'max-h-[5.5rem] overflow-hidden border-dashed border-stripe-border hover:border-stripe-muted')}>
-    {deleteMode ? <DeleteLabel /> : <><p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex w-[6.5rem] shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} /></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}</>}
+    {deleteMode ? <DeleteLabel /> : <><p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} /><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label="Delete text clip" onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}</>}
   </div>
 }
 

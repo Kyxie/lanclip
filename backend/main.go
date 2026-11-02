@@ -81,6 +81,14 @@ func main() {
 		json.NewEncoder(w).Encode(clips)
 	})
 
+	mux.HandleFunc("DELETE /api/clipboard", func(w http.ResponseWriter, r *http.Request) {
+		s.ClearAll()
+		clipsData, _ := json.Marshal(map[string]any{"type": "clips_updated", "clips": s.GetAll()})
+		h.Broadcast(clipsData)
+		broadcastFile(h, s)
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	mux.HandleFunc("POST /api/file", func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxUploadRequestSize)
 		reader, err := r.MultipartReader()

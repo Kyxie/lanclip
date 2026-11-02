@@ -131,3 +131,11 @@ func (s *Store) ClearFile() {
 	defer s.mu.Unlock()
 	s.file = nil
 }
+
+// ClearAll removes all shared clips and the current file in one operation.
+func (s *Store) ClearAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.clips = make([]Clip, 0)
+	s.file = nil
+}
