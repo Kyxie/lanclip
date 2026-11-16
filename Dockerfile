@@ -1,5 +1,5 @@
 # ── Stage 1: build frontend ──────────────────────────────────────────────────
-FROM node:22-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
 WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
@@ -7,13 +7,15 @@ COPY frontend/ ./
 RUN npm run build
 
 # ── Stage 2: build backend ───────────────────────────────────────────────────
-FROM golang:1.25-alpine AS backend-builder
+FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS backend-builder
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /app
 COPY backend/ ./
 # Copy built frontend into the embed path expected by //go:embed static
 COPY --from=frontend-builder /app/dist ./static
 RUN go mod tidy && \
-    CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o lanclip .
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w" -o lanclip .
 
 # ── Stage 3: minimal runtime image ───────────────────────────────────────────
 FROM alpine:3.20

@@ -25,7 +25,7 @@ release bump="patch":
 # Build production image
 prod-build:
     @echo "📦 Building production image: lanclip..."
-    docker build -t lanclip .
+    docker build -t ghcr.io/kyxie/lanclip:latest .
 
 # Run production environment (Port 3000)
 prod-run:
@@ -47,5 +47,5 @@ clean:
     @echo "🧹 Cleaning production containers..."
     docker compose down
     @echo "🗑️ Attempting to remove lanclip image..."
-    -docker rmi lanclip 2>/dev/null
+    -docker rmi ghcr.io/kyxie/lanclip:latest 2>/dev/null
     @echo "✨ Cleanup complete!"

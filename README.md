@@ -26,10 +26,15 @@ This project lets users submit short text clips and receive real-time updates th
 ### Production (Docker)
 
 ```bash
+docker compose pull
 docker compose up -d
 ```
 
 Open: http://localhost:3000
+
+The production Compose file pulls `ghcr.io/kyxie/lanclip:latest`. To verify the image locally without pulling it, run `just prod-build` followed by `just prod-run`. Copy `.env.example` to `.env` to change the port or clip history size.
+
+GHCR packages are private on first publish. Make the package public in GitHub if the N100 should pull it without authentication; otherwise log in on the N100 with a token that has `read:packages`.
 
 ### Development (recommended with just)
 
@@ -50,7 +55,7 @@ just dev-down
 
 After committing your changes, run `just release` to push the current branch and create the next patch tag. Use `just release minor` or `just release major` to increase the middle or first version number. For example, starting at `v1.0.10`, these produce `v1.0.11`, `v1.1.0`, or `v2.0.0` respectively.
 
-The command requires a clean working tree and an up-to-date branch. It pushes the commit and tag together, which triggers the Docker image build. You can also choose **Run workflow** in GitHub Actions and select patch, minor, or major.
+The command requires a clean working tree and an up-to-date branch. It pushes the commit and tag together, which triggers GitHub Actions to publish `ghcr.io/kyxie/lanclip:latest` and `ghcr.io/kyxie/lanclip:<version>` for `linux/amd64` and `linux/arm64`. The workflow uses its built-in `GITHUB_TOKEN`; no Docker Hub credentials are needed.
 
 ## Environment Variables
 
