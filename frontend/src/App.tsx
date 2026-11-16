@@ -121,9 +121,8 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function FileCard({ file, onDelete }: { file: SharedFile; onDelete: () => void }) {
-  const { deleteMode, handlers } = useLongPressDelete(() => {}, onDelete)
-  return <div {...handlers} className={cn('flex min-h-[5.5rem] cursor-pointer items-center justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-colors duration-200 ease-out hover:border-solid hover:border-stripe-muted', deleteMode ? 'border-solid border-red-500 bg-red-50' : 'border-dashed border-stripe-border')}>
-    {deleteMode ? <DeleteLabel /> : <><div className="flex min-w-0 items-center gap-3"><FileUp className="h-4 w-4 shrink-0 text-stripe-muted" strokeWidth={1.5} /><div className="min-w-0"><p className="truncate text-[13px] font-medium text-stripe-text">{file.name}</p><p className="text-[11px] text-stripe-muted">{formatFileSize(file.size)} · {relativeTime(new Date(file.createdAt))}</p></div></div><div className="flex shrink-0 items-center gap-1"><a href="/api/file" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded border border-stripe-border bg-white px-3 text-[13px] font-medium text-stripe-text transition-colors hover:bg-stripe-bg active:bg-[#eef2f7]"><Download className="h-3.5 w-3.5" strokeWidth={1.5} />Download</a><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${file.name}`} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete() }}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></>}
+  return <div className="flex min-h-[5.5rem] items-center justify-between gap-4 rounded-xl border-[1.5px] border-dashed border-stripe-border bg-white px-4 py-3">
+    <div className="flex min-w-0 items-center gap-3"><FileUp className="h-4 w-4 shrink-0 text-stripe-muted" strokeWidth={1.5} /><div className="min-w-0"><p className="truncate text-[13px] font-medium text-stripe-text">{file.name}</p><p className="text-[11px] text-stripe-muted">{formatFileSize(file.size)} · {relativeTime(new Date(file.createdAt))}</p></div></div><div className="flex shrink-0 items-center gap-1"><a href="/api/file" className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded border border-stripe-border bg-white px-3 text-[13px] font-medium text-stripe-text transition-colors hover:bg-stripe-bg active:bg-[#eef2f7]"><Download className="h-3.5 w-3.5" strokeWidth={1.5} />Download</a><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label={`Delete ${file.name}`} onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div>
   </div>
 }
 
@@ -151,28 +150,9 @@ function CopyButton({ text, iconOnly = false }: { text: string; iconOnly?: boole
 function HistoryCard({ clip, expanded, onToggle, onCollapse, onDelete }: { clip: Clip; expanded: boolean; onToggle: () => void; onCollapse: () => void; onDelete: () => void }) {
   const [, setTick] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
-  const { deleteMode, handlers } = useLongPressDelete(onToggle, onDelete)
   useEffect(() => { const id = setInterval(() => setTick((t) => t + 1), 30_000); return () => clearInterval(id) }, [])
   useEffect(() => { if (!expanded) return; const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCollapse() }; document.addEventListener('mousedown', handler); return () => document.removeEventListener('mousedown', handler) }, [expanded, onCollapse])
-  return <div ref={ref} {...handlers} className={cn('relative flex cursor-pointer items-start justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-all duration-300 ease-out', deleteMode ? 'min-h-[5.5rem] items-center justify-center border-solid border-red-500 bg-red-50' : expanded ? 'max-h-[15rem] overflow-y-auto border-solid border-stripe-text' : 'max-h-[5.5rem] overflow-hidden border-dashed border-stripe-border hover:border-stripe-muted')}>
-    {deleteMode ? <DeleteLabel /> : <><p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div className="flex items-center gap-1" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} iconOnly /><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label="Delete text clip" onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}</>}
+  return <div ref={ref} onClick={!expanded ? onToggle : undefined} className={cn('relative flex items-start justify-between gap-4 rounded-xl border-[1.5px] bg-white px-4 py-3 transition-all duration-300 ease-out', expanded ? 'max-h-[15rem] overflow-y-auto border-solid border-stripe-text' : 'max-h-[5.5rem] cursor-pointer overflow-hidden border-dashed border-stripe-border hover:border-stripe-muted')}>
+    <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-stripe-text">{clip.content}</p><div className="sticky top-0 flex shrink-0 flex-col items-end gap-2 self-start pt-0.5"><span className="text-[11px] tabular-nums text-stripe-muted">{relativeTime(new Date(clip.createdAt))}</span><div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}><CopyButton text={clip.content} iconOnly /><Button variant="ghost" size="sm" className="px-2 text-red-600 hover:bg-red-50 hover:text-red-700" aria-label="Delete text clip" onClick={onDelete}><Trash2 className="h-4 w-4" strokeWidth={1.5} /></Button></div></div>{!expanded && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-3 bg-gradient-to-t from-white to-transparent" />}
   </div>
-}
-
-function DeleteLabel() { return <p className="text-lg font-semibold tracking-[0.3em] text-red-600">DELETE</p> }
-
-function useLongPressDelete(onActivate: () => void, onDelete: () => void) {
-  const [deleteMode, setDeleteMode] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const ignoreClick = useRef(false)
-  const clearTimer = () => { if (timer.current) clearTimeout(timer.current); timer.current = null }
-  useEffect(() => clearTimer, [])
-  return { deleteMode, handlers: {
-    onPointerDown: () => { if (!deleteMode) timer.current = setTimeout(() => { ignoreClick.current = true; setDeleteMode(true) }, 500) },
-    onPointerUp: clearTimer,
-    onPointerLeave: clearTimer,
-    onPointerCancel: clearTimer,
-    onContextMenu: (e: React.MouseEvent) => { if (deleteMode) e.preventDefault() },
-    onClick: () => { if (ignoreClick.current) { ignoreClick.current = false; return }; if (deleteMode) onDelete(); else onActivate() },
-  } }
 }
